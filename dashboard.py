@@ -284,11 +284,14 @@ else:
         df_hr['temp_c'].median(),
     ]]))[0]
     delta = predicted_pace - ref_pace
+    minutes = int(predicted_pace)
+    decimal_part = predicted_pace - int(predicted_pace)
+    seconds = int(decimal_part * 60)
 
     col_m1, col_m2, col_m3 = st.columns(3)
     col_m1.metric(
         "Erwartete Pace",
-        f"{predicted_pace:.2f} min/km",
+        f"{minutes}:{seconds:02d} min/km",
         delta=f"{delta:+.2f} vs. Median",
         delta_color="inverse",
     )
