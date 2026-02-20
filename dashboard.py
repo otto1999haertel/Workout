@@ -248,6 +248,7 @@ else:
     st.plotly_chart(fig, use_container_width=True)
 
     # ── Modellgüte ────────────────────────────────────────────────────────────
+    # Verbesserbar mit mehr Daten und ggf. mehr Features
     if r2 < 0.4:
         st.warning(f"⚠️ Modell-R² = {r2:.2f} – geringe Vorhersagequalität.")
     elif r2 < 0.7:
