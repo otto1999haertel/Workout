@@ -6,6 +6,11 @@ import plotly.graph_objects as go
 from datetime import datetime
 import scipy.stats as stats
 import time 
+import streamlit as st
+import plotly.graph_objects as go
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import PolynomialFeatures
 
 # Daten laden
 @st.cache_data
@@ -183,16 +188,144 @@ fig_pace.update_layout(
 st.plotly_chart(fig_pace, use_container_width=True)
 
 # 3. Herzfrequenz vs Pace
-st.subheader("Herzfrequenz vs. Pace vs Temperature")
-df_hr = df_filtered.dropna(subset=['avg_hf'])
-if len(df_hr) > 0:
-    fig_hr = px.scatter(df_hr, x='pace_min_km', y='avg_hf',
-                        size='distance_km', color='temp_c',
-                        title='Herzfrequenz vs. Pace',
-                        labels={'pace_min_km': 'Pace (min/km)', 'avg_hf': 'Herzfrequenz (bpm)', 'temp_c': 'Temp (°C)'})
-    st.plotly_chart(fig_hr, use_container_width=True)
+st.subheader("❤️ Herzfrequenz-Analyse: Pace × Temperatur")
+
+df_hr = df_filtered.dropna(subset=['avg_hf', 'temp_c', 'pace_min_km'])
+
+if len(df_hr) < 5:
+    st.info("Zu wenig Daten für eine Analyse (mind. 5 Läufe benötigt)")
 else:
-    st.info("Keine Herzfrequenz-Daten verfügbar")
+    # ── Model trainieren ──────────────────────────────────────────────────────
+    X = df_hr[['pace_min_km', 'temp_c']].values
+    y = df_hr['avg_hf'].values
+
+    poly = PolynomialFeatures(degree=2, include_bias=False)
+    X_poly = poly.fit_transform(X)
+    model = LinearRegression().fit(X_poly, y)
+    r2 = model.score(X_poly, y)
+
+    # ── Prediction Grid (elevation_gain auf Median fixiert) ───────────────────
+    GRID_SIZE = 60
+    pace_range  = np.linspace(df_hr['pace_min_km'].min(), df_hr['pace_min_km'].max(), GRID_SIZE)
+    temp_range  = np.linspace(df_hr['temp_c'].min(),      df_hr['temp_c'].max(),      GRID_SIZE)
+
+    pace_grid, temp_grid = np.meshgrid(pace_range, temp_range)
+
+    grid_poly = poly.transform(np.c_[pace_grid.ravel(), temp_grid.ravel()])
+    hr_pred   = model.predict(grid_poly).reshape(pace_grid.shape)
+
+    # ── Contour + Scatter Plot ────────────────────────────────────────────────
+    fig = go.Figure()
+
+    # Heatmap-Hintergrund
+    fig.add_trace(go.Contour(
+        x=pace_range,
+        y=temp_range,
+        z=hr_pred,
+        colorscale='RdYlGn_r',
+        contours=dict(
+            showlabels=True,
+            labelfont=dict(size=11, color='white'),
+            start=int(hr_pred.min()),
+            end=int(hr_pred.max()),
+            size=5,
+        ),
+        colorbar=dict(title=dict(text='Pred. HF (bpm)', side='right')),
+        opacity=0.85,
+        name='Modell',
+        hovertemplate='Pace: %{x:.1f} min/km<br>Temp: %{y:.1f}°C<br>Pred. HF: %{z:.0f} bpm<extra></extra>',
+    ))
+
+    # Echte Läufe als Scatter
+    fig.add_trace(go.Scatter(
+        x=df_hr['pace_min_km'],
+        y=df_hr['temp_c'],
+        mode='markers',
+        marker=dict(
+            color=df_hr['avg_hf'],
+            colorscale='RdYlGn_r',
+            cmin=hr_pred.min(),
+            cmax=hr_pred.max(),
+            size=10,
+            line=dict(color='white', width=1.5),
+            symbol='circle',
+        ),
+        name='Läufe',
+        hovertemplate=(
+            '<b>Lauf</b><br>'
+            'Pace: %{x:.1f} min/km<br>'
+            'Temp: %{y:.1f}°C<br>'
+            'Tatsächliche HF: %{marker.color:.0f} bpm'
+            '<extra></extra>'
+        ),
+        customdata=df_hr['avg_hf'],
+    ))
+
+    fig.update_layout(
+        title=dict(
+            text=(
+                f'HF-Heatmap: Pace × Temperatur '
+                f'<span style="font-size:13px;color:gray">'
+                f'(R² = {r2:.2f}, n={len(df_hr)}, '
+            ),
+            font=dict(size=16),
+        ),
+        xaxis=dict(title='Pace (min/km)', tickformat='.1f'),
+        yaxis=dict(title='Temperatur (°C)'),
+        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
+        height=500,
+        margin=dict(l=60, r=20, t=70, b=60),
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # ── Hinweis auf Modellgüte ────────────────────────────────────────────────
+    if r2 < 0.4:
+        st.warning(f"⚠️ Modell-R² = {r2:.2f} – die Vorhersagequalität ist gering. Mehr Läufe verbessern das Modell.")
+    elif r2 < 0.7:
+        st.info(f"ℹ️ Modell-R² = {r2:.2f} – mittlere Vorhersagequalität.")
+    else:
+        st.success(f"✅ Modell-R² = {r2:.2f} – gute Vorhersagequalität.")
+
+    st.divider()
+
+    # ── Interaktiver Prediction-Slider ────────────────────────────────────────
+    st.subheader("🔮 HF-Prognose für deinen nächsten Lauf")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        pred_pace = st.slider(
+            "Geplante Pace (min/km)",
+            min_value=float(round(df_hr['pace_min_km'].min(), 1)),
+            max_value=float(round(df_hr['pace_min_km'].max(), 1)),
+            value=float(round(df_hr['pace_min_km'].median(), 1)),
+            step=0.1,
+        )
+    with col2:
+        pred_temp = st.slider(
+            "Erwartete Temperatur (°C)",
+            min_value=float(round(df_hr['temp_c'].min())),
+            max_value=float(round(df_hr['temp_c'].max())),
+            value=float(round(df_hr['temp_c'].median())),
+            step=1.0,
+        )
+
+    # Prediction mit allen 3 Features
+    predicted_hr = model.predict(poly.transform([[pred_pace, pred_temp]]))[0]
+
+    # Referenz: alle 3 Features auf Median
+    ref_hr = model.predict(poly.transform([[
+        df_hr['pace_min_km'].median(),
+        df_hr['temp_c'].median(),
+    ]]))[0]
+
+    delta = predicted_hr - ref_hr
+
+    col_m1, col_m2, col_m3 = st.columns(3)
+    col_m1.metric("Erwartete Herzfrequenz", f"{predicted_hr:.0f} bpm",
+                delta=f"{delta:+.0f} vs. Median", delta_color="inverse")
+    col_m2.metric("Pace",        f"{pred_pace:.1f} min/km")
+    col_m3.metric("Temperatur",  f"{pred_temp:.0f} °C")
 
 # 4. Temperatur-Einfluss
 st.subheader("Temperatur-Einfluss auf Pace")
