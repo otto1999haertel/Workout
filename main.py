@@ -7,7 +7,7 @@ import pandas as pd
 import re
 from ml import *
 
-all_runs = "allRuns.csv"
+_all_runs = "allRuns.csv"
 all_runs_columns = 0
 
 values_not_available = {
@@ -27,7 +27,7 @@ def _validate_path(csv_file_path):
     return csv_file_path
 
 def _read_all_runs_file():
-    return pd.read_csv(_validate_path(all_runs), delimiter=";")
+    return pd.read_csv(_validate_path(_all_runs), delimiter=";")
 
 def _convert_time(tim_to_convert):
     converted_time = str.strip(tim_to_convert)
@@ -114,12 +114,12 @@ def _filter_duplicates(parsed_data, existing_df):
 
 def _merge_parsed_data(parsed_data):
     # Falls Spaltenweise geliefert → in Zeilen umwandeln
-     with open(all_runs, 'rb') as f:
+    with open(_all_runs, 'rb') as f:
         f.seek(-1, 2)  # Gehe zum letzten Byte
         last_byte = f.read(1)
         needs_newline = last_byte != b'\n'
 
-     with open(all_runs, 'a', newline='', encoding='utf-8') as csv_file:
+    with open(_all_runs, 'a', newline='', encoding='utf-8') as csv_file:
         if needs_newline:
             csv_file.write('\n')
         csv_write = csv.writer(csv_file, delimiter=';')
@@ -129,7 +129,7 @@ def _sort_parsed_date_ascending_data(parsed_data):
     return sorted(parsed_data, key=lambda x: datetime.fromisoformat(x[0]))
 
 def clean_time():
-    with open(all_runs, newline="") as infile, \
+    with open(_all_runs, newline="") as infile, \
     open("formatted.csv", "w", newline="") as outfile:
         reader = csv.reader(infile, delimiter=";")
         writer = csv.writer(outfile, delimiter=";")
@@ -144,7 +144,7 @@ def clean_time():
 def merge_files(current_data, file_to_merge):
     _validate_path(file_to_merge)
 
-    parsed_data = "" #must be [['','']]
+    parsed_data = [] 
     if file_to_merge == "raw_data/allWorkouts.csv":
         parsed_data = _read_exported_allWorkOuts_file(file_to_merge)
         # Sort files
@@ -153,6 +153,8 @@ def merge_files(current_data, file_to_merge):
         parsed_data = _read_exported_generalData_file(file_to_merge)
     
     # Validierung
+    if not parsed_data:
+        raise ValueError(f"Unbekannte Datei: {file_to_merge}")
     if len(parsed_data[0]) != 14:
         raise Exception(f"Created data not valid. Expected 14 columns, got {len(parsed_data[0])}")
     
@@ -168,15 +170,14 @@ def merge_files(current_data, file_to_merge):
     print(f"✓ {len(parsed_data)} Läufe erfolgreich hinzugefügt!")
 
 def calc_average_s_pace(data):
-    avg_pace=0
     df = pd.DataFrame(data)
     avg_pace = df['avg_pace_sec'].mean()
     return avg_pace
 
 def calc_sum_run_km(data):
-    sum =0
-    sum = pd.DataFrame(data)['distance_km'].sum()
-    return sum
+    total =0
+    total = pd.DataFrame(data)['distance_km'].sum()
+    return total
 
 def avg_heart_rate(data):
     avg_hr = 0
@@ -210,7 +211,7 @@ def _ins_temp(data, temps):
         data.loc[mask, 'temp_c'] = float(raw_temp)
         print("Nach Änderung:")
         print(data.loc[mask, ['start_time', 'temp_c']]) 
-    data.to_csv(all_runs, sep=';', index=False)
+    data.to_csv(_all_runs, sep=';', index=False)
     
 def launch_dashboard():
     """Startet das Streamlit Dashboard"""
