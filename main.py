@@ -194,7 +194,7 @@ def __print_duartion_from_s(sec):
     sec = int(sec % 60)
     return "{:02d}m {:02d}s".format(minutes, sec)
 
-def __ins_temp(data, temps):
+def _ins_temp(data, temps):
     temps_l = temps.split()
     date_format = '%d.%m.%Y'
     for temp in temps_l:
