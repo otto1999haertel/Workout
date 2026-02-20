@@ -266,15 +266,16 @@ else:
             "Geplante Herzfrequenz (bpm)",
             min_value=120,
             max_value=160,
-            value=int(df_hr['avg_hf'].median()),
+            value=125,
             step=1,
         )
+    last_index = df_hr['temp_c'].last_valid_index()
     with col2:
         pred_temp = st.slider(
             "Erwartete Temperatur (°C)",
             min_value=-10,
             max_value=40,
-            value=int(df_hr['temp_c'].median()),
+            value=int(df_hr['temp_c'][last_index]),
             step=1,
         )
 
