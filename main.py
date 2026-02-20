@@ -21,20 +21,20 @@ DURATION_REGEX = re.compile(
     r"^(\d+):([0-5]\d):([0-5]\d)$"
 )
 
-def validate_path(csv_file_path):
+def _validate_path(csv_file_path):
     if not os.path.exists(csv_file_path):
         raise Exception("CSV-File not found", csv_file_path)
     return csv_file_path
 
-def read_all_runs_file():
-    return pd.read_csv(validate_path(all_runs), delimiter=";")
+def _read_all_runs_file():
+    return pd.read_csv(_validate_path(all_runs), delimiter=";")
 
-def __convert_time__(tim_to_convert):
+def _convert_time(tim_to_convert):
     converted_time = str.strip(tim_to_convert)
     converted_time = 'T'.join([converted_time.split()[0], converted_time.split()[1]])
     return converted_time
 
-def __convert_duration_to_second__(duration):
+def _convert_duration_to_second(duration):
     match = DURATION_REGEX.match(duration)
     if not match or not any(match.groups()):
         raise ValueError(f"Ungültige Duration: {duration}")
@@ -43,33 +43,33 @@ def __convert_duration_to_second__(duration):
     seconds = int(match.group(3) or 0)
     return timedelta(hours=hours, minutes=minutes, seconds=seconds).seconds
 
-def __convert_deciamL__(decimal):
+def _convert_decimal(decimal):
     return decimal.replace(',', '.')
 
-def __read_exported_allWorkOuts_file(exported_file):
+def _read_exported_allWorkOuts_file(exported_file):
     complete_data = []
     with open(exported_file, newline="", encoding="utf-8") as file:
         reader = csv.DictReader(file, delimiter=",")
         for row in reader:
             new_row = []
-            new_row.append(__convert_time__(row.get("Start")))
-            new_row.append(__convert_time__(row.get("End")))
-            new_row.append(__convert_duration_to_second__(row.get("Duration")))
-            new_row.append(__convert_deciamL__(row.get("Distance")))
-            new_row.append(__convert_deciamL__(row.get("Average Heart Rate")))
-            new_row.append(__convert_deciamL__(row.get("Max Heart Rate")))
-            new_row.append(__convert_duration_to_second__(row.get("Average Pace")))
-            new_row.append(__convert_deciamL__(row.get("Average Speed")))
-            new_row.append(__convert_deciamL__(row.get("Average Cadence")))
-            new_row.append(__convert_deciamL__(row.get("Total Energy")))
-            new_row.append(__convert_deciamL__(row.get("Elevation Ascended")))
-            new_row.append(__convert_deciamL__(row.get("Elevation Descended")))
+            new_row.append(_convert_time(row.get("Start")))
+            new_row.append(_convert_time(row.get("End")))
+            new_row.append(_convert_duration_to_second(row.get("Duration")))
+            new_row.append(_convert_decimal(row.get("Distance")))
+            new_row.append(_convert_decimal(row.get("Average Heart Rate")))
+            new_row.append(_convert_decimal(row.get("Max Heart Rate")))
+            new_row.append(_convert_duration_to_second(row.get("Average Pace")))
+            new_row.append(_convert_decimal(row.get("Average Speed")))
+            new_row.append(_convert_decimal(row.get("Average Cadence")))
+            new_row.append(_convert_decimal(row.get("Total Energy")))
+            new_row.append(_convert_decimal(row.get("Elevation Ascended")))
+            new_row.append(_convert_decimal(row.get("Elevation Descended")))
             new_row.append("")  # temp_c (leer)
             new_row.append("")  # notes (leer)
             complete_data.append(new_row)
     return complete_data
 
-def __read_exported_generalData_file(exported_file):
+def _read_exported_generalData_file(exported_file):
     complete_data = []
     with open(exported_file, newline="", encoding="utf-8") as file:
         reader = csv.DictReader(file, delimiter=",")
@@ -79,13 +79,13 @@ def __read_exported_generalData_file(exported_file):
             if field != "Type":
                 value = ""
                 if field == "Start" or field == "End":
-                    value = __convert_time__(row.get("Value"))
+                    value = _convert_time(row.get("Value"))
                 elif field == "Duration" or field == "Average Pace time/km":
-                    value = __convert_duration_to_second__(row.get("Value"))
+                    value = _convert_duration_to_second(row.get("Value"))
                 elif field in values_not_available:
                     continue
                 else:
-                    value = __convert_deciamL__(row.get("Value"))
+                    value = _convert_decimal(row.get("Value"))
                 if value != "":
                     print(value)
                     new_row.append(value)
@@ -95,7 +95,7 @@ def __read_exported_generalData_file(exported_file):
     print(complete_data) 
     return complete_data
 
-def __filter_duplicates(parsed_data, existing_df):
+def _filter_duplicates(parsed_data, existing_df):
     """Entfernt Einträge, die bereits in allRuns.csv existieren"""
     existing_starts = set(existing_df['start_time'].values)
     filtered_data = []
@@ -112,7 +112,7 @@ def __filter_duplicates(parsed_data, existing_df):
     print(f"✓ {len(filtered_data)} neue Läufe, {skipped} Duplikate übersprungen")
     return filtered_data
 
-def __merge_parsed_data(parsed_data):
+def _merge_parsed_data(parsed_data):
     # Falls Spaltenweise geliefert → in Zeilen umwandeln
      with open(all_runs, 'rb') as f:
         f.seek(-1, 2)  # Gehe zum letzten Byte
@@ -125,7 +125,7 @@ def __merge_parsed_data(parsed_data):
         csv_write = csv.writer(csv_file, delimiter=';')
         csv_write.writerows(parsed_data)
 
-def __sort_parsed_date_ascending_data(parsed_data):
+def _sort_parsed_date_ascending_data(parsed_data):
     return sorted(parsed_data, key=lambda x: datetime.fromisoformat(x[0]))
 
 def clean_time():
@@ -141,49 +141,49 @@ def clean_time():
             row[1] = row[1][:-3]
             writer.writerow(row)
 
-def __merge_files(current_data, file_to_merge):
-    validate_path(file_to_merge)
+def merge_files(current_data, file_to_merge):
+    _validate_path(file_to_merge)
 
     parsed_data = "" #must be [['','']]
     if file_to_merge == "raw_data/allWorkouts.csv":
-        parsed_data = __read_exported_allWorkOuts_file(file_to_merge)
+        parsed_data = _read_exported_allWorkOuts_file(file_to_merge)
         # Sort files
-        parsed_data = __sort_parsed_date_ascending_data(parsed_data)
+        parsed_data = _sort_parsed_date_ascending_data(parsed_data)
     if file_to_merge == "raw_data/generalData.csv":
-        parsed_data = __read_exported_generalData_file(file_to_merge)
+        parsed_data = _read_exported_generalData_file(file_to_merge)
     
     # Validierung
     if len(parsed_data[0]) != 14:
         raise Exception(f"Created data not valid. Expected 14 columns, got {len(parsed_data[0])}")
     
     # Duplikate filtern
-    parsed_data = __filter_duplicates(parsed_data, current_data)
+    parsed_data = _filter_duplicates(parsed_data, current_data)
     
     if len(parsed_data) == 0:
         print("⚠️  Keine neuen Läufe zum Hinzufügen!")
         return
     
     # Daten anhängen
-    __merge_parsed_data(parsed_data)
+    _merge_parsed_data(parsed_data)
     print(f"✓ {len(parsed_data)} Läufe erfolgreich hinzugefügt!")
 
-def __calc_average_s_pace(data):
+def calc_average_s_pace(data):
     avg_pace=0
     df = pd.DataFrame(data)
     avg_pace = df['avg_pace_sec'].mean()
     return avg_pace
 
-def __calc_sum_run_km(data):
+def calc_sum_run_km(data):
     sum =0
     sum = pd.DataFrame(data)['distance_km'].sum()
     return sum
 
-def __avg_heart_rate(data):
+def avg_heart_rate(data):
     avg_hr = 0
     avg_hr = pd.DataFrame(data)['avg_hf'].mean()
     return avg_hr
 
-def __avg_km_rn(data):
+def avg_km_rn(data):
     avg_km=0
     avg_km=pd.DataFrame(data)['distance_km'].mean()
     return avg_km
@@ -214,7 +214,6 @@ def __ins_temp(data, temps):
     
 def launch_dashboard():
     """Startet das Streamlit Dashboard"""
-    import os
     
     dashboard_path = os.path.join(os.path.dirname(__file__), "dashboard.py")
     
@@ -233,7 +232,7 @@ def ml_prediction(data):
 
 if __name__ == "__main__":
     print("Passed lengt ", len(sys.argv))
-    current_data = read_all_runs_file()
+    current_data = _read_all_runs_file()
     all_runs_columns = current_data.columns.value_counts().size
     if all_runs_columns != 14:
         raise Exception(f"Table not valid. Expected 14 columns, got {all_runs_columns}")
@@ -254,16 +253,16 @@ if __name__ == "__main__":
             case "clean_time":
                 clean_time()
             case "average_pace":
-                pace_s = __calc_average_s_pace(current_data)
+                pace_s = calc_average_s_pace(current_data)
                 print("Average Pace " +  __print_duartion_from_s(pace_s))
             case "sum_km":
-                sum_km = __calc_sum_run_km(current_data)
+                sum_km = calc_sum_run_km(current_data)
                 print("Sum of all run km: " + str(round(sum_km, 2)))
             case "avg_hr":
-                avg_hr = __avg_heart_rate(current_data)
+                avg_hr = avg_heart_rate(current_data)
                 print("Average Heart Rate: " + str(round(avg_hr, 0)))
             case "avg_km_rn":
-                avg_km = __avg_km_rn(current_data)
+                avg_km = avg_km_rn(current_data)
                 print("Avg of all run km: " + str(round(avg_km, 2)))
             case "dashboard":
                 launch_dashboard()
@@ -276,4 +275,4 @@ if __name__ == "__main__":
         match command:
             case "merge_files":
                 print("merging files ...")
-                __merge_files(current_data, sys.argv[2])
+                merge_files(current_data, sys.argv[2])
