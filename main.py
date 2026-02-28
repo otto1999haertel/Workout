@@ -31,9 +31,14 @@ def _read_all_runs_file():
     return pd.read_csv(_validate_path(_all_runs), delimiter=";")
 
 def _convert_time(tim_to_convert):
-    converted_time = str.strip(tim_to_convert)
-    converted_time = 'T'.join([converted_time.split()[0], converted_time.split()[1]])
-    return converted_time
+    converted_time = tim_to_convert.strip()
+    date_part, time_part = converted_time.split()
+
+    # Sekunden ergänzen, falls sie fehlen
+    if len(time_part.split(":")) == 2:
+        time_part += ":00"
+
+    return f"{date_part}T{time_part}"
 
 def _convert_duration_to_second(duration):
     match = DURATION_REGEX.match(duration)

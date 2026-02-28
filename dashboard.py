@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import streamlit as st
 import pandas as pd
@@ -10,10 +12,16 @@ import numpy as np
 from sklearn.linear_model import Ridge
 from sklearn.preprocessing import PolynomialFeatures
 
+
+
+i_cloud_raw_data_path = "/Users/ottohartel/Library/Mobile Documents/com~apple~CloudDocs/Workout/raw_data"
+i_cloud_parent = os.path.dirname(i_cloud_raw_data_path)
+_all_runs = os.path.join(i_cloud_parent, "allRuns.csv")
+
 # Daten laden
 @st.cache_data
 def load_data():
-    df = pd.read_csv('allRuns.csv', delimiter=';')
+    df = pd.read_csv(_all_runs, delimiter=';')
     df['start_datetime'] = pd.to_datetime(df['start_time'], format='mixed')
     df['date'] = df['start_datetime'].dt.date
     df['year'] = df['start_datetime'].dt.year
@@ -400,7 +408,7 @@ else:
                                     'avg_cadence', 'total_energy_kcal', 'elev_gain_m', 
                                     'elev_loss_m', 'temp_c', 'notes']
                     
-                    df[original_cols].to_csv('allRuns.csv', sep=';', index=False)
+                    df[original_cols].to_csv(_all_runs, sep=';', index=False)
                     
                     st.success(f"✅ {len(changes)} Temperatur-Einträge gespeichert:")
                     for change in changes:
