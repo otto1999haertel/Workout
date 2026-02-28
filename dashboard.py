@@ -202,7 +202,7 @@ if len(df_hr) < 5:
     st.info("Zu wenig Daten für eine Analyse (mind. 5 Läufe benötigt)")
 else:
     # ── Model trainieren ──────────────────────────────────────────────────────
-    X = df_hr[['avg_hf', 'temp_c']].values
+    X = df_hr[['avg_hf', 'temp_c', "distance_km"]].values
     y = df_hr['pace_min_km'].values
 
     poly = PolynomialFeatures(degree=2, include_bias=False)
@@ -269,12 +269,12 @@ else:
     # ── Interaktiver Prediction-Slider ────────────────────────────────────────
     st.subheader("🔮 Pace-Prognose für deinen nächsten Lauf")
 
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
         pred_hf = st.slider(
             "Geplante Herzfrequenz (bpm)",
             min_value=120,
-            max_value=160,
+            max_value=int(df_hr['avg_hf'].max()),
             value=125,
             step=1,
         )
@@ -287,11 +287,20 @@ else:
             value=int(df_hr['temp_c'][last_index]),
             step=1,
         )
+    with col3:
+        pred_km = st.slider(
+            "Erwartete Distanz (km)",
+            min_value=0,
+            max_value=int(df_hr['distance_km'].max()),
+            value=int(df_hr['distance_km'][last_index]),
+            step=1,
+        )
 
-    predicted_pace = model.predict(poly.transform([[pred_hf, pred_temp]]))[0]
+    predicted_pace = model.predict(poly.transform([[pred_hf, pred_temp, pred_km]]))[0]
     ref_pace = model.predict(poly.transform([[
         df_hr['avg_hf'].median(),
         df_hr['temp_c'].median(),
+        df_hr['distance_km'].median(),
     ]]))[0]
     delta = predicted_pace - ref_pace
     minutes = int(predicted_pace)
