@@ -5,9 +5,10 @@ import subprocess
 import sys
 import pandas as pd
 import re
-from ml import *
 
-_all_runs = "allRuns.csv"
+i_cloud_raw_data_path = "/Users/ottohartel/Library/Mobile Documents/com~apple~CloudDocs/Workout/raw_data"
+i_cloud_parent = os.path.dirname(i_cloud_raw_data_path)
+_all_runs = os.path.join(i_cloud_parent, "allRuns.csv")
 all_runs_columns = 0
 
 values_not_available = {
@@ -142,14 +143,17 @@ def clean_time():
             writer.writerow(row)
 
 def merge_files(current_data, file_to_merge):
-    _validate_path(file_to_merge)
+    #_validate_path(file_to_merge)
 
     parsed_data = [] 
-    if file_to_merge == "raw_data/allWorkouts.csv":
+    if file_to_merge == "all" :#raw_data/allWorkouts.csv":
+        file_to_merge =os.path.join(i_cloud_raw_data_path, "allWorkouts.csv")
+        #parsed_data = pd.read_csv(file_to_merge, sep = ",")
         parsed_data = _read_exported_allWorkOuts_file(file_to_merge)
         # Sort files
         parsed_data = _sort_parsed_date_ascending_data(parsed_data)
-    if file_to_merge == "raw_data/generalData.csv":
+    if file_to_merge == "general": # "raw_data/generalData.csv":
+        file_to_merge = os.path.join(i_cloud_raw_data_path, "generalData.csv")
         parsed_data = _read_exported_generalData_file(file_to_merge)
     
     # Validierung
@@ -228,8 +232,6 @@ def launch_dashboard():
     # Direkter Aufruf mit os.system
     subprocess.run(["streamlit", "run", dashboard_path]) 
 
-def ml_prediction(data):
-    pace = predict_pace(data)
 
 if __name__ == "__main__":
     print("Passed lengt ", len(sys.argv))
@@ -267,8 +269,6 @@ if __name__ == "__main__":
                 print("Avg of all run km: " + str(round(avg_km, 2)))
             case "dashboard":
                 launch_dashboard()
-            case "ml":
-                print(predict_pace(current_data))
 
 
     if len(sys.argv) == 3:
