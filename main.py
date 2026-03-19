@@ -247,7 +247,7 @@ if __name__ == "__main__":
     if len(sys.argv) == 1:
         print("Please provide a command. Possible Commands:")
         print("print_lines : printing lines from csv file")
-        print("merge_files required argument: file to merge into allRuns.csv")
+        print("merge_files required argument: file to merge into allRuns.csv; default: all")
         print("average_pace : durchschnitts Pace aller läufe berechnen")
         print("sum_km : summe aller gelaufenen kilometer")
         print("avg_km_rn : durchschnittliche Kilometer pro lauf ")
