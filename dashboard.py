@@ -339,7 +339,7 @@ recent = recent_filtered.sort_values('start_datetime', ascending=False).head(20)
 if len(recent) == 0:
     st.warning(f"⚠️ Keine Läufe ab {start_date} gefunden!")
 else:
-    display_cols = ['date', 'distance_km', 'pace_min_km', 'avg_hf', 'temp_c']
+    display_cols = ['date', 'distance_km', 'pace_min_km', 'avg_hf', 'temp_c', 'notes']
     
     # Aufteilen in mit/ohne Temperatur
     with_temp = recent[recent['temp_c'].notna()]
